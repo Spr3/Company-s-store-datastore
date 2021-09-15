@@ -1,228 +1,672 @@
-import math
-import random
-import time
 from tkinter import *
-import random
 root = Tk()
-#first if row,second is the collumn and 3rd is to save the size
-Boardsize = [3,3,2]
-BoardArray = []
-placmentRow, PLamentCollumn, Boardsizenumber,playerWon = StringVar(), StringVar(), IntVar(), StringVar()
-LivingPlayers = 1
-#Makes The UI
-Topframe = Frame(root, width=335, height=110)
-Topframe.grid(row=0, column=0)
-Topframe.configure(bg='grey')
-# Page1
-Top1 = Label(Topframe, text="            TikTakToe            ", font=("Helvetica", 25))
-Top1.grid(row=0, column=0)
-Top1.configure(bg='black', fg='white')
-#Send in X
-global createdboard
-createdboard = False
-def playerhaswon1():
-    for widgets in root.winfo_children():
-        widgets.destroy()
-    print(playerWon.get()," kefo")
-    if playerWon.get() == "X":
-        Top1 = Label(root, text="Player X has Won", font=("Helvetica", 25),width=20)
-        Top1.grid(row=0, column=0)
-        Top1.configure(bg='black', fg='white')
-    elif playerWon.get() == "Y":
-        Top1 = Label(root, text="Player Y has Won", font=("Helvetica", 25), width=20)
-        Top1.grid(row=0, column=0)
-        Top1.configure(bg='black', fg='white')
-    elif playerWon.get() == "Draw":
-        Top1 = Label(root, text="Draw!!", font=("Helvetica", 25), width=20)
-        Top1.grid(row=0, column=0)
-        Top1.configure(bg='black', fg='white')
-def setbottom():
-    Inputframe = Frame(root, width=335, height=110)
-    Inputframe.grid(row=4223, column=0)
-    Inputframe.configure(bg='grey')
-    Top1 = Label(Inputframe, text="Row:", font=("Helvetica", 25))
+#Database
+import sqlite3
+conn = sqlite3.connect("Database")
+cur = conn.cursor()
+
+conn.execute(f'''CREATE TABLE IF NOT EXISTS Customers (
+        qrcode INTEGER,
+        FirstName TEXT,
+        LastName TEXT,
+        State TEXT,
+        City TEXT,
+        EmailAddress TEXT,
+        ZipCode INTEGER,
+        PhoneNumber INTEGER)''')
+
+conn.execute(f'''CREATE TABLE IF NOT EXISTS Product (
+        qrcode INTEGER,
+        name TEXT,
+        gradeRangeMinimum INTEGER,
+        gradeRangeMaximum INTEGER,
+        Price INTEGER)''')
+
+conn.execute(f'''CREATE TABLE IF NOT EXISTS Sales (
+        qrcode INTEGER,
+        PersonsName TEXT,
+        Date TEXT,
+        Quantity INTEGER)''')
+
+conn.commit()
+conn.close()
+
+def getCustomer(ID):
+    cursor = sqlite3.connect("Database").cursor()
+    cursor.execute('SELECT * FROM Customers')
+    allcustomers = cursor.fetchall()
+
+    for cusomer in allcustomers:
+        if str(ID) == str(allcustomers[0]):
+            print(cusomer)
+            return cusomer
+
+def RemoveFromDatabase(ID, modify):
+    conn = sqlite3.connect("Database")
+    conn.execute(f'''DELETE from Customers where id = {id}''')
+    conn.commit()
+    conn.close()
+
+def EditSales():
+    newWindow1 = Toplevel(root)
+    newWindow1.title("New Window")
+    newWindow1.geometry("335x150")
+    newWindow1.geometry("+300+300")
+    newWindow1.configure(bg="black")
+
+    Topframe = Frame(newWindow1, width=335, height=15)
+    Topframe.grid(row=0, column=0)
+    Topframe.configure(bg='grey')
+    # Page1
+    Top1 = Label(Topframe, text="  Edit Sales", font=("Helvetica", 25))
     Top1.grid(row=0, column=0)
     Top1.configure(bg='black', fg='white')
-    Top1 = Entry(Inputframe, textvariable = placmentRow, font=("Helvetica", 25),width=5)
-    Top1.grid(row=0, column=1)
+
+    centerframe = Frame(newWindow1, width=31, height=15)
+    centerframe.grid(row=1, column=0)
+    centerframe.configure(bg='black')
+    # Page1
+    Top1 = Label(centerframe, text="Persons name", font=("Helvetica", 10))
+    Top1.grid(row=0, column=2)
     Top1.configure(bg='black', fg='white')
-    Top1 = Label(Inputframe, text="Collumn:", font=("Helvetica", 25))
+
+    Top1 = Text(centerframe, width=5, height=1)
     Top1.grid(row=0, column=3)
     Top1.configure(bg='black', fg='white')
-    Top1 = Entry(Inputframe, textvariable = PLamentCollumn, font=("Helvetica", 25),width=5)
-    Top1.grid(row=0, column=4)
-    Top1.configure(bg='black', fg='white')
-    Top1 = Button(Inputframe, text="Input", font=("Helvetica", 25), command=placeX)
-    Top1.grid(row=0, column=5)
-    Top1.configure(bg='black', fg='white')
-    CreateBoard()
-def placeY():
-    if LivingPlayers == 1:
-        while True:
-            randomX = random.randint(0,Boardsize[2]-1)
-            randomy = random.randint(0,Boardsize[2]-1)
-            if BoardArray[randomX][randomy] == "  ":
-                BoardArray[randomX][randomy] = "O"
-                clear_screen()
-                break
-    else:
-        if BoardArray[int(placmentRow.get()) - 1][int(PLamentCollumn.get()) - 1] == "  ":
-            BoardArray[int(placmentRow.get()) - 1][int(PLamentCollumn.get()) - 1] = "O"
-    endgame()
-def placeX():
-    if BoardArray[int(placmentRow.get()) - 1][int(PLamentCollumn.get()) - 1] == "  ":
-        BoardArray[int(placmentRow.get()) - 1][int(PLamentCollumn.get()) - 1] = "X"
-        placeY()
-def endgame():
-    stopgame = False
-    for vertical in range(len(BoardArray)):
-        if stopgame == True:
-            break
-        #this will get the values of the items
-        XsandOs = [0,0]
-        #check for horizontal
-        for item in range(len(BoardArray[vertical])):
-            Vertically = [0,0]
-            #if there is nothing in the spot it will move onto the next line
-            if BoardArray[vertical][item] == " ":
-                break
-            if BoardArray[vertical][item] == "X":
-                XsandOs[0] += 1
-            elif BoardArray[vertical][item] == "O":
-                XsandOs[1] += 1
-            if XsandOs[0] >= 1 and XsandOs[1] >= 1:
-                break
 
-            XsandOs1 = [0, 0]
-            #checks verticly
-            for hight in range(len(BoardArray)):
-                if BoardArray[hight][item] == " ":
-                    break
-                if BoardArray[hight][item] == "X":
-                    XsandOs1[0] += 1
-                elif BoardArray[hight][item] == "O":
-                    XsandOs1[1] += 1
-                if XsandOs1[0] >= 1 and XsandOs1[1] >= 1:
-                    break
-            if XsandOs1[0] == len(BoardArray) or XsandOs1[1] == len(BoardArray):
-                if XsandOs1[0] == len(BoardArray):
-                    print("Player X has won")
-                    playerWon = "X"
-                    playerhaswon1()
-                    return ("End")
-                    stopgame = True
-                else:
-                    print("Player O has won")
-                    playerWon = "Y"
-                    playerhaswon1()
-                    return ("End")
-                    stopgame = True
-        #checks if horizontal is done
-        if XsandOs[0] == len(BoardArray[vertical]) or XsandOs[1] == len(BoardArray[vertical]):
-            if XsandOs[0] == len(BoardArray[vertical]):
-                print("Player X has won")
-                playerWon = "X"
-                playerhaswon1()
-                return ("End")
-                stopgame = True
-            else:
-                print("Player O has won")
-                playerhaswon1()
-                playerWon = "Y"
-                return ("End")
-                stopgame = True
-        #diganal
-        for hightdiaganle in range(len(BoardArray)):
-            if stopgame == True:
-                break
-            if BoardArray[0][len(BoardArray[0])-1] == "X" and BoardArray[len(BoardArray)-1][0] == "X" or BoardArray[0][len(BoardArray[0])-1] == "O" and BoardArray[len(BoardArray)-1][0] == "O":
-                winner = 1
-                value = BoardArray[0][len(BoardArray[0])-1]
-                for countingdown in range(len(BoardArray)):
-                    if value == BoardArray[len(BoardArray[0])-countingdown-1][countingdown]:
-                        if not winner == 0:
-                            winner = 1
-                    else:
-                        winner = 0
-                if winner == 1:
-                    playerWon = BoardArray[len(BoardArray[0])-countingdown-1][countingdown]
-                    playerhaswon1()
-                    print("We have a winner and that is player", BoardArray[len(BoardArray[0])-countingdown-1][countingdown])
-                    stopgame = True
-                    return ("End")
-                    break
-            if BoardArray[0][0] == "X" and BoardArray[len(BoardArray)-1][len(BoardArray[0])-1] == "X" or BoardArray[0][0] == "O" and BoardArray[len(BoardArray)-1][len(BoardArray[0])-1] == "O":
-                short = 0
-                value = BoardArray[0][0]
-                if len(BoardArray) >= len(BoardArray[0]):
-                    short = len(BoardArray[0])
-                else:
-                    short = len(BoardArray)
-                winner = 1
-                for countingdown in range(short):
-                    if value == BoardArray[countingdown][countingdown]:
-                        if not winner == 0:
-                            winner = 1
-                    else:
-                        winner = 0
-                if winner == 1:
-                    playerWon = BoardArray[0][0]
-                    print("We have a winner and that is player", BoardArray[0][0])
-                    playerhaswon1()
-                    return ("End")
-                    stopgame = True
-                break
-        draw = True
-        for array in BoardArray:
-            for item in array:
-                if item == "  ":
-                    draw = False
-        if draw == True:
-            print("It was a draw")
-            playerWon = "Draw"
-            playerhaswon1()
-            stopgame = True
-            return ("End")
-    clear_screen()
-def CreateBoard():
-    global createdboard
-    Boardsize[2] = Boardsizenumber.get()
-    Boardsize[0] = Boardsize[2]
-    Boardsize[1] = Boardsize[2]
-    if createdboard == False:
-        createdboard = True
-        for i in range(Boardsize[2]):
-            BoardArray.append([])
-            for v in range(Boardsize[2]):
-                BoardArray[i].append("  ")
-    while Boardsize[0] >= 1:
-        Topframe = Frame(root, width=335, height=110)
-        Topframe.grid(row=Boardsize[2] - Boardsize[0]+1, column=0)
-        while Boardsize[1] >= 1:
-            print(Boardsize[2] - Boardsize[1])
-            Top1 = Button(Topframe, text=BoardArray[Boardsize[2] - Boardsize[0]][Boardsize[2] - Boardsize[1]], font=("Helvetica", 25))
-            Top1.grid(row=0, column=(Boardsize[1] - Boardsize[2])*-1)
-            Top1.configure(bg='black', fg='white')
-            Boardsize[1] -= 1
-        Boardsize[0] -= 1
-        Boardsize[1] = Boardsize[2]
-def clear_screen():
-    for widgets in root.winfo_children():
-        widgets.destroy()
-    setbottom()
-def askforboardsize():
-    Inputframe = Frame(root, width=335, height=110)
-    Inputframe.grid(row=4223, column=0)
-    Inputframe.configure(bg='grey')
-    Top1 = Label(Inputframe, text="Size of Board:", font=("Helvetica", 25))
+    # Page1
+    Top1 = Label(centerframe, text="Date", font=("Helvetica", 10))
+    Top1.grid(row=1, column=2)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=1, column=3)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Label(centerframe, text="Quanity", font=("Helvetica", 10))
+    Top1.grid(row=4, column=2)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=4, column=3)
+    Top1.configure(bg='black', fg='white')
+
+    Input = Button(centerframe, text="     Search     ")
+    Input.grid(row=6, column=1)
+    Input.configure(bg='grey', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=6, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Input = Button(centerframe, text="     Input     ", height=1)
+    Input.grid(row=6, column=4)
+    Input.configure(bg='grey', fg='white')
+
+def EditProduct():
+    newWindow1 = Toplevel(root)
+    newWindow1.title("New Window")
+    newWindow1.geometry("335x150")
+    newWindow1.geometry("+300+300")
+    newWindow1.configure(bg="black")
+
+    Topframe = Frame(newWindow1, width=335, height=15)
+    Topframe.grid(row=0, column=0)
+    Topframe.configure(bg='grey')
+    # Page1
+    Top1 = Label(Topframe, text="  Edit Product", font=("Helvetica", 25))
     Top1.grid(row=0, column=0)
     Top1.configure(bg='black', fg='white')
-    Top1 = Entry(Inputframe, textvariable=Boardsizenumber, font=("Helvetica", 25), width=5)
+
+    centerframe = Frame(newWindow1, width=31, height=15)
+    centerframe.grid(row=1, column=0)
+    centerframe.configure(bg='black')
+    # Page1
+    Top1 = Label(centerframe, text="Item name", font=("Helvetica", 10))
+    Top1.grid(row=0, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
     Top1.grid(row=0, column=1)
     Top1.configure(bg='black', fg='white')
+
+    # Page1
+    Top1 = Label(centerframe, text="Minimum grade level", font=("Helvetica", 10))
+    Top1.grid(row=1, column=0)
     Top1.configure(bg='black', fg='white')
-    Top1 = Button(Inputframe, text="Input", font=("Helvetica", 25), command=setbottom)
-    Top1.grid(row=0, column=5)
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=1, column=1)
     Top1.configure(bg='black', fg='white')
-askforboardsize()
+
+    Top1 = Label(centerframe, text="Maximum grade level", font=("Helvetica", 10))
+    Top1.grid(row=4, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=4, column=1)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Label(centerframe, text="Price", font=("Helvetica", 10))
+    Top1.grid(row=5, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=5, column=1)
+    Top1.configure(bg='black', fg='white')
+
+    bottomframe = Frame(newWindow1, width=335, height=15)
+    bottomframe.grid(row=6, column=0)
+    bottomframe.configure(bg='grey')
+
+    Input = Button(centerframe, text="     Search     ")
+    Input.grid(row=6, column=1)
+    Input.configure(bg='grey', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=6, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Input = Button(centerframe, text="     Input     ", height=1)
+    Input.grid(row=6, column=3)
+    Input.configure(bg='grey', fg='white')
+
+def EditEmploee():
+    newWindow1 = Toplevel(root)
+    newWindow1.title("New Window")
+    newWindow1.geometry("335x150")
+    newWindow1.geometry("+300+300")
+    newWindow1.configure(bg="black")
+
+    Topframe = Frame(newWindow1, width=335, height=15)
+    Topframe.grid(row=0, column=0)
+    Topframe.configure(bg='grey')
+    # Page1
+    Top1 = Label(Topframe, text="  Edi Employee", font=("Helvetica", 25))
+    Top1.grid(row=0, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    centerframe = Frame(newWindow1, width=31, height=15)
+    centerframe.grid(row=1, column=0)
+    centerframe.configure(bg='black')
+    # Page1
+    Top1 = Label(centerframe, text="First Name", font=("Helvetica", 10))
+    Top1.grid(row=0, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=0, column=1)
+    Top1.configure(bg='black', fg='white')
+
+    # Page1
+    Top1 = Label(centerframe, text=" Last Name", font=("Helvetica", 10))
+    Top1.grid(row=0, column=2)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=0, column=3)
+    Top1.configure(bg='black', fg='white')
+
+    # Page1
+    Top1 = Label(centerframe, text="Mailing Address", font=("Helvetica", 10))
+    Top1.grid(row=1, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=1, column=1)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Label(centerframe, text="City", font=("Helvetica", 10))
+    Top1.grid(row=1, column=2)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=1, column=3)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Label(centerframe, text="State", font=("Helvetica", 10))
+    Top1.grid(row=4, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=4, column=1)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Label(centerframe, text="Zip Code", font=("Helvetica", 10))
+    Top1.grid(row=4, column=2)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=4, column=3)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Label(centerframe, text="Email Address", font=("Helvetica", 10))
+    Top1.grid(row=5, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=5, column=1)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Label(centerframe, text="Phone Number", font=("Helvetica", 10))
+    Top1.grid(row=5, column=2)
+    Top1.configure(bg='black', fg='white')
+
+    CosumerID = Text(centerframe, width=5, height=1)
+    CosumerID.grid(row=5, column=3)
+    CosumerID.configure(bg='black', fg='white')
+
+    #Input = Button(centerframe, text="     Search     ", command=lambda: getCustomer(CosumerID))
+    #Input.grid(row=6, column=1)
+    #Input.configure(bg='grey', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=6, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Input = Button(centerframe,text="     Input     ", height=1)
+    Input.grid(row=6, column=3)
+    Input.configure(bg='grey', fg='white')
+
+def AddEmploee():
+    newWindow1 = Toplevel(root)
+    newWindow1.title("New Window")
+    newWindow1.geometry("335x150")
+    newWindow1.geometry("+300+300")
+    newWindow1.configure(bg="black")
+
+    Topframe = Frame(newWindow1, width=335, height=15)
+    Topframe.grid(row=0, column=0)
+    Topframe.configure(bg='grey')
+    # Page1
+    Top1 = Label(Topframe, text="  Add Employee", font=("Helvetica", 25))
+    Top1.grid(row=0, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    centerframe = Frame(newWindow1, width=31, height=15)
+    centerframe.grid(row=1, column=0)
+    centerframe.configure(bg='black')
+    # Page1
+    Top1 = Label(centerframe, text="First Name", font=("Helvetica", 10))
+    Top1.grid(row=0, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=0, column=1)
+    Top1.configure(bg='black', fg='white')
+
+    # Page1
+    Top1 = Label(centerframe, text=" Last Name", font=("Helvetica", 10))
+    Top1.grid(row=0, column=2)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=0, column=3)
+    Top1.configure(bg='black', fg='white')
+
+    # Page1
+    Top1 = Label(centerframe, text="Mailing Address", font=("Helvetica", 10))
+    Top1.grid(row=1, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=1, column=1)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Label(centerframe, text="City", font=("Helvetica", 10))
+    Top1.grid(row=1, column=2)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=1, column=3)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Label(centerframe, text="State", font=("Helvetica", 10))
+    Top1.grid(row=4, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=4, column=1)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Label(centerframe, text="Zip Code", font=("Helvetica", 10))
+    Top1.grid(row=4, column=2)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=4, column=3)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Label(centerframe, text="Email Address", font=("Helvetica", 10))
+    Top1.grid(row=5, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=5, column=1)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Label(centerframe, text="Phone Number", font=("Helvetica", 10))
+    Top1.grid(row=5, column=2)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=5, column=3)
+    Top1.configure(bg='black', fg='white')
+
+    bottomframe = Frame(newWindow1, width=335, height=15)
+    bottomframe.grid(row=6, column=0)
+    bottomframe.configure(bg='grey')
+
+    Input = Button(bottomframe,text="Input",width=46, height=1)
+    Input.grid(row=0, column=0)
+    Input.configure(bg='grey', fg='white')
+
+def AddProduct():
+    WndowProductAdd = Toplevel(root)
+    WndowProductAdd.title("New Window")
+    WndowProductAdd.geometry("335x150")
+    WndowProductAdd.geometry("+300+300")
+    WndowProductAdd.configure(bg="black")
+
+    Topframe = Frame(WndowProductAdd, width=335, height=15)
+    Topframe.grid(row=0, column=0)
+    Topframe.configure(bg='grey')
+    # Page1
+    Top1 = Label(Topframe, text="  Add Product", font=("Helvetica", 25))
+    Top1.grid(row=0, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    centerframe = Frame(WndowProductAdd, width=31, height=15)
+    centerframe.grid(row=1, column=0)
+    centerframe.configure(bg='black')
+    # Page1
+    Top1 = Label(centerframe, text="Item name",font=("Helvetica", 10))
+    Top1.grid(row=0, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    ItemName = Text(centerframe, width=5, height=1,textvariable=ProductName)
+    ItemName.grid(row=0, column=1)
+    ItemName.configure(bg='black', fg='white')
+
+    # Page1
+    Top1 = Label(centerframe, text="Minimum grade level", font=("Helvetica", 10))
+    Top1.grid(row=1, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=1, column=1)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Label(centerframe, text="Maximum grade level", font=("Helvetica", 10))
+    Top1.grid(row=4, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=4, column=1)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Label(centerframe, text="Price", font=("Helvetica", 10))
+    Top1.grid(row=5, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=5, column=1)
+    Top1.configure(bg='black', fg='white')
+
+    bottomframe = Frame(WndowProductAdd, width=335, height=15)
+    bottomframe.grid(row=6, column=0)
+    bottomframe.configure(bg='grey')
+
+    Input = Button(bottomframe, text="Input",command=ProductAdded, width=46, height=1)
+    Input.grid(row=0, column=0)
+    Input.configure(bg='grey', fg='white')
+
+def AddSales():
+    newWindow1 = Toplevel(root)
+    newWindow1.title("New Window")
+    newWindow1.geometry("335x150")
+    newWindow1.geometry("+300+300")
+    newWindow1.configure(bg="black")
+
+    Topframe = Frame(newWindow1, width=335, height=15)
+    Topframe.grid(row=0, column=0)
+    Topframe.configure(bg='grey')
+    # Page1
+    Top1 = Label(Topframe, text="  Add Sales", font=("Helvetica", 25))
+    Top1.grid(row=0, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    centerframe = Frame(newWindow1, width=31, height=15)
+    centerframe.grid(row=1, column=0)
+    centerframe.configure(bg='black')
+    # Page1
+    Top1 = Label(centerframe, text="Persons name", font=("Helvetica", 10))
+    Top1.grid(row=0, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=0, column=1)
+    Top1.configure(bg='black', fg='white')
+
+    # Page1
+    Top1 = Label(centerframe, text="Date", font=("Helvetica", 10))
+    Top1.grid(row=1, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=1, column=1)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Label(centerframe, text="Quanity", font=("Helvetica", 10))
+    Top1.grid(row=4, column=0)
+    Top1.configure(bg='black', fg='white')
+
+    Top1 = Text(centerframe, width=5, height=1)
+    Top1.grid(row=4, column=1)
+    Top1.configure(bg='black', fg='white')
+
+    bottomframe = Frame(newWindow1, width=335, height=15)
+    bottomframe.grid(row=6, column=0)
+    bottomframe.configure(bg='grey')
+
+    Input = Button(bottomframe, text="Input", width=46, height=1)
+    Input.grid(row=0, column=0)
+    Input.configure(bg='grey', fg='white')
+
+def employees():
+    newWindow1 = Toplevel(root)
+    newWindow1.title("New Window")
+    newWindow1.geometry("335x150")
+    newWindow1.geometry("+300+300")
+    newWindow1.configure(bg="black")
+
+    Topframe = Frame(newWindow1, width=310, height=150)
+    Topframe.grid(row=0, column=0)
+    Topframe.configure(bg='grey')
+    # Page1
+    Top1 = Label(Topframe, text="    employees", font=("Helvetica", 25))
+    Top1.grid(row=0, column=0)
+    Top1.configure(bg='black', fg='white')
+    #EnterPerson
+    middleframe = Frame(newWindow1, width=310, height=150)
+    middleframe.grid(row=1, column=0)
+    middleframe.configure(bg='black')
+
+    # Set Buttons
+    Employ = Label(middleframe, text="         ", height=4)
+    Employ.configure(bg='black')
+    Employ.grid(row=0, column=0)
+
+    Employ = Button(middleframe, text="   Enter   \n   employ   ",command=AddEmploee, font=("Helvetica", 14))
+    Employ.configure(bg='grey')
+    Employ.grid(row=0, column=1)
+
+    Employ = Label(middleframe, text="           ", height=4)
+    Employ.configure(bg='black')
+    Employ.grid(row=0, column=2)
+
+    Employ = Button(middleframe, text="   Edit   \n   employ   ", command=EditEmploee, font=("Helvetica", 14))
+    Employ.configure(bg='grey')
+    Employ.grid(row=0, column=3)
+    #goback
+    Employ = Button(newWindow1, text="         Go Back To Welcome Page        ", font=("Helvetica", 14),command=newWindow1.destroy)
+    Employ.configure(bg='grey')
+    Employ.grid(row=2, column=0,columnspan=2)
+
+def Product():
+    newWindow1 = Toplevel(root)
+    newWindow1.title("New Window")
+    newWindow1.geometry("335x150")
+    newWindow1.geometry("+300+300")
+    newWindow1.configure(bg="black")
+
+    Topframe = Frame(newWindow1, width=310, height=150)
+    Topframe.grid(row=0, column=0)
+    Topframe.configure(bg='grey')
+    # Page1
+    Top1 = Label(Topframe, text="             Products           ", font=("Helvetica", 25))
+    Top1.grid(row=0, column=0)
+    Top1.configure(bg='black', fg='white')
+    #EnterPerson
+    middleframe = Frame(newWindow1, width=310, height=150)
+    middleframe.grid(row=1, column=0)
+    middleframe.configure(bg='black')
+
+    # Set Buttons
+    Employ = Button(middleframe, text="   Enter   \n   Product   ",command=AddProduct, font=("Helvetica", 14))
+    Employ.configure(bg='grey')
+    Employ.grid(row=0, column=0)
+
+    Employ = Label(middleframe, text="                 ", height=4)
+    Employ.configure(bg='black')
+    Employ.grid(row=0, column=1)
+
+    Employ = Button(middleframe, text="   Edit   \n   Product   ", command=EditProduct, font=("Helvetica", 14))
+    Employ.configure(bg='grey')
+    Employ.grid(row=0, column=2)
+    #goback
+    Employ = Button(newWindow1, text="         Go Back To Welcome Page        ", font=("Helvetica", 14),command=newWindow1.destroy)
+    Employ.configure(bg='grey')
+    Employ.grid(row=2, column=0, columnspan=2)
+
+def Sales():
+    newWindow1 = Toplevel(root)
+    newWindow1.title("New Window")
+    newWindow1.geometry("335x150")
+    newWindow1.geometry("+300+300")
+    newWindow1.configure(bg="black")
+
+    Topframe = Frame(newWindow1, width=310, height=150)
+    Topframe.grid(row=0, column=0)
+    Topframe.configure(bg='grey')
+    # Page1
+    Top1 = Label(Topframe, text="               Sales              ", font=("Helvetica", 25))
+    Top1.grid(row=0, column=0)
+    Top1.configure(bg='black', fg='white')
+    #EnterPerson
+    middleframe = Frame(newWindow1, width=310, height=150)
+    middleframe.grid(row=1, column=0)
+    middleframe.configure(bg='black')
+
+    # Set Buttons
+    Employ = Button(middleframe, text="     Edit     \n     Sales     ",command=EditSales, font=("Helvetica", 14))
+    Employ.configure(bg='grey')
+    Employ.grid(row=0, column=0)
+
+    Employ = Label(middleframe, text="                 ", height=4)
+    Employ.configure(bg='black')
+    Employ.grid(row=0, column=1)
+
+    Employ = Button(middleframe, text="     Enter     \n     Sales     ", command=AddSales, font=("Helvetica", 14))
+    Employ.configure(bg='grey')
+    Employ.grid(row=0, column=2)
+    #goback
+    Employ = Button(newWindow1, text="         Go Back To Welcome Page        ", font=("Helvetica", 14),command=newWindow1.destroy)
+    Employ.configure(bg='grey')
+    Employ.grid(row=2, column=0, columnspan=2)
+
+def Reports():
+    newWindow1 = Toplevel(root)
+    newWindow1.title("New Window")
+    newWindow1.geometry("335x150")
+    newWindow1.geometry("+300+300")
+    newWindow1.configure(bg="black")
+
+    Topframe = Frame(newWindow1, width=310, height=150)
+    Topframe.grid(row=0, column=0)
+    Topframe.configure(bg='grey')
+    # Page1
+    Top1 = Label(Topframe, text="             Reports           ", font=("Helvetica", 25))
+    Top1.grid(row=0, column=0)
+    Top1.configure(bg='black', fg='white')
+    #EnterPerson
+    middleframe = Frame(newWindow1, width=310, height=150)
+    middleframe.grid(row=1, column=0)
+    middleframe.configure(bg='black')
+
+    # Set Buttons
+    Employ = Button(middleframe, text="Customer\nlist", font=("Helvetica", 14))
+    Employ.configure(bg='grey')
+    Employ.grid(row=0, column=0)
+
+    Employ = Label(middleframe, text="                 ", height=4)
+    Employ.configure(bg='black')
+    Employ.grid(row=0, column=1)
+
+    Employ = Button(middleframe, text="Product\nSales", command=Product, font=("Helvetica", 14))
+    Employ.configure(bg='grey')
+    Employ.grid(row=0, column=2)
+    #goback
+    Employ = Button(newWindow1, text="     Go Back To Welcome Page    ", font=("Helvetica", 14),command=newWindow1.destroy)
+    Employ.configure(bg='grey')
+    Employ.grid(row=2, column=0,columnspan=2)
+
+def StartingPage():
+    root.geometry("335x150")
+    root.configure(bg="black")
+    root.geometry("+300+300")
+    #top
+    Topframe = Frame(root,width=310, height=150)
+    Topframe.grid(row=0,column=0)
+    Topframe.configure(bg='grey')
+    # Page1
+    Top1 = Label(Topframe, text="         Welcome         ",font=("Helvetica", 25))
+    Top1.grid(row=0,column=0)
+    Top1.configure(bg='black', fg='white')
+
+    middleframe = Frame(root, width=310, height=150)
+    middleframe.grid(row=1, column=0)
+    middleframe.configure(bg='black')
+
+    # Set Buttons
+    Employ = Button(middleframe, text="Enter/Edit\nEmployees", command=employees, font=("Helvetica", 14))
+    Employ.configure(bg='grey')
+    Employ.grid(row=0, column=0)
+
+    Employ = Label(middleframe, text=" ",height=4)
+    Employ.configure(bg='black')
+    Employ.grid(row=0, column=1)
+
+    Employ = Button(middleframe, text="Enter/Edit\nProduct", command=Product, font=("Helvetica", 14))
+    Employ.configure(bg='grey')
+    Employ.grid(row=0, column=2)
+
+    Employ = Label(middleframe, text=" ", height=4)
+    Employ.configure(bg='black')
+    Employ.grid(row=0, column=3)
+
+    Employ = Button(middleframe, text="Enter/Edit\nSales", command=Sales, font=("Helvetica", 14))
+    Employ.configure(bg='grey')
+    Employ.grid(row=0, column=4)
+
+    bottomframe = Frame(root, width=310)
+    bottomframe.grid(row=2, column=0)
+    bottomframe.configure(bg='grey')
+
+    Employ = Button(bottomframe, text="                         Reports                         ", command=Reports, font=("Helvetica", 14))
+    Employ.configure(bg='grey')
+    Employ.grid(row=0, column=0)
+
+#code starts here
+StartingPage()
 root.mainloop()
